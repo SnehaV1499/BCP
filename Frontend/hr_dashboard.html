@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>HR Dashboard | JobNest</title>
+  <style>
+    /* CSS Styling for the HR Dashboard */
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f9f9f9;
+    }
+
+    .dashboard-container {
+      display: flex;
+      height: 100vh;
+    }
+
+    .sidebar {
+      width: 250px;
+      background-color: #004d99;
+      color: white;
+      padding-top: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .sidebar h2 {
+      margin-bottom: 30px;
+    }
+
+    .sidebar button {
+      background-color: transparent;
+      border: none;
+      color: white;
+      padding: 15px;
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .sidebar button:hover {
+      background-color: #0066cc;
+    }
+
+    .main-content {
+      flex: 1;
+      padding: 30px;
+      overflow-y: auto;
+    }
+
+    .section {
+      display: none;
+    }
+
+    .section.active {
+      display: block;
+    }
+
+    .profile-section img {
+      float: right;
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-left: 30px;
+    }
+
+    .profile-details {
+      max-width: 600px;
+    }
+
+    .profile-details p {
+      margin: 10px 0;
+    }
+
+    .editable {
+      border-bottom: 1px dashed #aaa;
+      cursor: text;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    table, th, td {
+      border: 1px solid #ccc;
+    }
+
+    th, td {
+      padding: 10px;
+      text-align: left;
+    }
+
+    .resume-analysis-frame {
+      width: 100%;
+      height: 600px;
+      border: none;
+    }
+
+    input[type="file"] {
+      margin-top: 10px;
+    }
+
+    .job-form input, .job-form textarea {
+      display: block;
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 15px;
+    }
+
+    .job-form button {
+      padding: 10px 20px;
+      background-color: #004d99;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    .job-form button:hover {
+      background-color: #0066cc;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="dashboard-container">
+    <div class="sidebar">
+      <h2>JobNest HR</h2>
+      <button onclick="showSection('profile-section')">Profile</button>
+      <button onclick="showSection('job-posting-section')">Job Posting</button>
+      <button onclick="showSection('interview-tracker-section')">Interview Tracker</button>
+      <button onclick="showSection('applications-section')">Job Applications</button>
+      <button onclick="showSection('dashboard-overview-section')">Dashboard Overview</button>
+      
+    </div>
+
+    <div class="main-content">
+      <!-- Profile Section -->
+      <div id="profile-section" class="section active profile-section">
+        <h1>HR Profile</h1>
+        <div class="profile-details">
+          <img id="hr-pic" src="" alt="Profile Picture" />
+          <p><strong>Name:</strong> <span id="hr-name" class="editable" contenteditable></span></p>
+          <p><strong>Email:</strong> <span id="hr-email"></span></p>
+          <p><strong>Contact:</strong> <span id="hr-contact" class="editable" contenteditable></span></p>
+          <p><strong>DOB:</strong> <span id="hr-dob" class="editable" contenteditable></span></p>
+          <p><strong>Company:</strong> <span id="hr-company" class="editable" contenteditable></span></p>
+          <p><strong>Experience:</strong> <span id="hr-experience" class="editable" contenteditable></span></p>
+          <p><strong>About Me:</strong> <span id="hr-about" class="editable" contenteditable></span></p>
+          <input type="file" id="profile-pic-input" accept="image/*" onchange="uploadProfilePic(event)">
+        </div>
+      </div>
+
+      <!-- Job Posting Section -->
+      <div id="job-posting-section" class="section">
+        <h1>Post a New Job</h1>
+        <form id="jobForm" class="job-form">
+          <input type="text" name="title" placeholder="Job Title" required />
+          <textarea name="description" placeholder="Job Description" required></textarea>
+          <input type="text" name="location" placeholder="Location" required />
+          <input type="number" name="salary" placeholder="Salary (Optional)" />
+          <button type="submit">Post Job</button>
+        </form>
+      </div>
+
+      <!-- Interview Tracker -->
+      <div id="interview-tracker-section" class="section">
+        <h1>Interview Tracker</h1>
+        <div id="interview-list">Loading...</div>
+      </div>
+
+      <!-- Job Applications -->
+      <div id="applications-section" class="section">
+        <h1>Job Applications</h1>
+        <table>
+          <thead>
+            <tr>
+              <th>Student Name</th>
+              <th>Job Applied</th>
+              <th>Resume Score</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="applications-table-body">
+            <!-- Filled via JavaScript -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Dashboard Overview -->
+      <div id="dashboard-overview-section" class="section">
+        <h1>Dashboard Overview</h1>
+        <p><strong>Total Jobs Posted:</strong> <span id="total-jobs">...</span></p>
+        <p><strong>Applications Received:</strong> <span id="total-applications">...</span></p>
+        <p><strong>Pending Interviews:</strong> <span id="pending-interviews">...</span></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(sectionId) {
+      document.querySelectorAll('.section').forEach(sec => {
+        sec.classList.remove('active');
+      });
+      document.getElementById(sectionId).classList.add('active');
+    }
+
+    const hrEmail = localStorage.getItem("hrEmail");
+    if (!hrEmail) {
+      alert("No HR session found.");
+      window.location.href = "hr_login.html";
+    }
+
+    async function fetchHRData() {
+      const res = await fetch(`/api/hr/byemail/${hrEmail}`);
+      const data = await res.json();
+
+      document.getElementById("hr-name").innerText = data.name || "";
+      document.getElementById("hr-email").innerText = data.email1 || "";
+      document.getElementById("hr-contact").innerText = data.contact || "";
+      document.getElementById("hr-dob").innerText = data.dob || "";
+      document.getElementById("hr-company").innerText = data.company || "";
+      document.getElementById("hr-experience").innerText = data.experience || "";
+      document.getElementById("hr-about").innerText = data.bio || "";
+      document.getElementById("hr-pic").src = `/uploads/${data.profilePic}`;
+    }
+
+    function uploadProfilePic(e) {
+      const file = e.target.files[0];
+      const formData = new FormData();
+      formData.append("profilePic", file);
+      formData.append("email1", hrEmail);
+
+      fetch("/api/hr/uploadpic", {
+        method: "PUT",
+        body: formData,
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          document.getElementById("hr-pic").src = `/uploads/${data.profilePic}`;
+        });
+    }
+
+    document.getElementById("jobForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      const payload = Object.fromEntries(formData.entries());
+      payload.hrEmail = hrEmail;
+
+      const res = await fetch("/api/jobs/post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        alert("Job posted successfully!");
+        this.reset();
+      } else {
+        alert("Failed to post job");
+      }
+    });
+
+    async function fetchApplications() {
+      const res = await fetch(`/api/applications/byhr/${hrEmail}`);
+      const data = await res.json();
+      const tbody = document.getElementById("applications-table-body");
+      tbody.innerHTML = "";
+
+      data.forEach(app => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${app.studentName}</td>
+          <td>${app.jobTitle}</td>
+          <td>${app.resumeScore || "-"}</td>
+          <td>${app.status}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function fetchOverviewStats() {
+      const res = await fetch(`/api/hr/dashboardstats/${hrEmail}`);
+      const data = await res.json();
+      document.getElementById("total-jobs").innerText = data.totalJobs;
+      document.getElementById("total-applications").innerText = data.totalApplications;
+      document.getElementById("pending-interviews").innerText = data.pendingInterviews;
+    }
+
+    window.onload = function () {
+      fetchHRData();
+      fetchApplications();
+      fetchOverviewStats();
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Resume Analysis - JobNest HR</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #0e1b2c;
+      color: white;
+      padding: 40px;
+    }
+    h1, h2 {
+      color: #80bfff;
+    }
+    form, .results {
+      background-color: #1c2b3a;
+      padding: 20px;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      background-color: #28445c;
+      border: none;
+      color: white;
+      margin-top: 5px;
+      border-radius: 5px;
+    }
+    button {
+      background-color: #80bfff;
+      color: #0e1b2c;
+      font-weight: bold;
+      padding: 10px 20px;
+      margin-top: 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-weight: bold;
+    }
+    .selected { background-color: #00c851; }
+    .rejected { background-color: #ff4444; }
+    .highlight { color: #f5c542; }
+    .section {
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Resume Analysis</h1>
+
+  <form id="analysis-form" enctype="multipart/form-data">
+    <label>Required Keywords (comma-separated)</label>
+    <input type="text" name="keywords" placeholder="e.g. Python, SQL, AWS" required />
+
+    <label>Minimum Education</label>
+    <input type="text" name="education" placeholder="e.g. B.Tech or MCA" required />
+
+    <label>Minimum Percentage</label>
+    <input type="number" name="percentage" placeholder="e.g. 60" required />
+
+    <label>Minimum Skills Count</label>
+    <input type="number" name="skills" placeholder="e.g. 3" required />
+
+    <label>Minimum Experience (Years)</label>
+    <input type="number" name="experience" placeholder="e.g. 2" required />
+
+    <label>Upload Resume (PDF or DOCX)</label>
+    <input type="file" name="resume" accept=".pdf,.doc,.docx" required />
+
+    <button type="submit">Analyze Resume</button>
+  </form>
+
+  <div class="results section" id="result" style="display: none;">
+    <h2>Analysis Result</h2>
+    <div id="decision" class="badge"></div>
+
+    <div class="section">
+      <h3>Match Summary:</h3>
+      <ul id="match-summary"></ul>
+    </div>
+
+    <div class="section">
+      <h3>Extracted Candidate Info:</h3>
+      <p><strong>Name:</strong> <span id="ex-name"></span></p>
+      <p><strong>Place:</strong> <span id="ex-place"></span></p>
+      <p><strong>Education:</strong> <span id="ex-edu"></span></p>
+      <p><strong>Skills:</strong> <span id="ex-skills"></span></p>
+      <p><strong>Certifications:</strong> <span id="ex-certs"></span></p>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("analysis-form").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const form = e.target;
+      const formData = new FormData(form);
+
+      const res = await fetch("http://localhost:8080/api/resume/analyze", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      const resultDiv = document.getElementById("result");
+      const decision = document.getElementById("decision");
+
+      if (data.success) {
+        resultDiv.style.display = "block";
+
+        // Display final result
+        decision.textContent = data.status;
+        decision.className = "badge " + (data.status === "Selected" ? "selected" : "rejected");
+
+        // Match summary
+        const summary = document.getElementById("match-summary");
+        summary.innerHTML = '';
+        for (const [key, val] of Object.entries(data.result)) {
+          summary.innerHTML += `<li><span class="highlight">${key}</span>: ${val ? "✅ Passed" : "❌ Failed"}</li>`;
+        }
+
+        // Extracted data
+        document.getElementById("ex-name").textContent = data.extracted.name || "Not found";
+        document.getElementById("ex-place").textContent = data.extracted.place || "Not found";
+        document.getElementById("ex-edu").textContent = data.extracted.education || "Not found";
+        document.getElementById("ex-skills").textContent = (data.extracted.skills || []).join(', ') || "None";
+        document.getElementById("ex-certs").textContent = (data.extracted.certifications || []).join(', ') || "None";
+      } else {
+        alert("Resume analysis failed. Please try again.");
+      }
+    });
+  </script>
+</body>
+</html>
