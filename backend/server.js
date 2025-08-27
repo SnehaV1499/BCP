@@ -1,64 +1,105 @@
 const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors");
+const router = express.Router();
+const multer = require("multer");
 const path = require("path");
-const dotenv = require("dotenv");
-const applicationRoutes = require('./modules/applicationRoutes');
+const bcrypt = require("bcryptjs");
+const Student = require("../models/Student");
 
+// =================== File Upload Config ===================
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, "uploads/"),
+  filename: (req, file, cb) =>
+    cb(null, Date.now() + path.extname(file.originalname))
+});
+const upload = multer({ storage });
 
+// =================== Student Registration ===================
+router.post(
+  "/register",
+  upload.fields([{ name: "profilePic" }, { name: "resume" }]),
+  async (req, res) => {
+    try {
+      const { name, studentId, email, password, dob, contact, skills, bio } =
+        req.body;
 
-dotenv.config();
+      // Check if already registered
+      const existing = await Student.findOne({ email });
+      if (existing) {
+        return res.status(400).json({ message: "Student already exists" });
+      }
 
+      const hashedPassword = await bcrypt.hash(password, 10);
 
-const PORT = 8080;
+      const student = new Student({
+        name,
+        studentId,
+        email,
+        password: hashedPassword,
+        dob,
+        contact,
+        skills,
+        bio,
+        role: "student",
+        profilePic: req.files["profilePic"]
+          ? `/uploads/${req.files["profilePic"][0].filename}`
+          : "",
+        resume: req.files["resume"]
+          ? `/uploads/${req.files["resume"][0].filename}`
+          : ""
+      });
 
-// ✅ Mongo URI directly (since you're not using .env file)
-const MONGO_URI = "mongodb+srv://jobnest:sneha@cluster0.h6yckym.mongodb.net/jobnest";
+      await student.save();
+      res.json({ message: "✅ Student registered successfully" });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "❌ Registration failed" });
+    }
+  }
+);
 
-// ✅ Routes
-const hrRoutes = require("./modules/hrRoutes");
-const studentRoutes = require("./modules/studentRoutes");
-const userRoutes = require("./modules/userroutes");
-const resumeAnalysisRoute = require('./modules/resumeAnalysis');
-
-
-
-const app = express();
-
-app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // serve images
-
-app.use('/api/applications', applicationRoutes);
-
-
-// ✅ Middleware
-app.use(cors());
-app.use(express.json());
-
-// ✅ Serve static files from Frontend folder
-app.use(express.static(path.join(__dirname, "../Frontend")));
-
-// ✅ API Routes
-app.use("/api/hr", hrRoutes);
-app.use("/api/students", studentRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/resume", resumeAnalysisRoute);
-
-// ✅ Home route (serves index.html)
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "../Frontend", "index.html"));
+// =================== Get Profile By Email ===================
+router.get("/profile/:email", async (req, res) => {
+  try {
+    const student = await Student.findOne({ email: req.params.email }).select(
+      "-password"
+    );
+    if (!student) return res.status(404).json({ message: "Student not found" });
+    res.json(student);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching profile" });
+  }
 });
 
-// ✅ Start Server AFTER Mongo Connect
-mongoose.connect(MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-  .then(() => {
-    console.log("✅ MongoDB connected");
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running at: http://localhost:${PORT}`);
-    });
-  })
-  .catch((err) => {
-    console.error("❌ MongoDB connection error:", err.message);
-  });
+// =================== Update Profile ===================
+router.put(
+  "/update/:email",
+  upload.fields([{ name: "profilePic" }, { name: "resume" }]),
+  async (req, res) => {
+    try {
+      const updates = { ...req.body };
+
+      if (req.files["profilePic"]) {
+        updates.profilePic = `/uploads/${req.files["profilePic"][0].filename}`;
+      }
+      if (req.files["resume"]) {
+        updates.resume = `/uploads/${req.files["resume"][0].filename}`;
+      }
+
+      const student = await Student.findOneAndUpdate(
+        { email: req.params.email },
+        { $set: updates },
+        { new: true }
+      ).select("-password");
+
+      if (!student)
+        return res.status(404).json({ message: "Student not found" });
+
+      res.json({ message: "✅ Profile updated", student });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "❌ Profile update failed" });
+    }
+  }
+);
+
+module.exports = router;

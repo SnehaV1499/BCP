@@ -17,13 +17,15 @@
       background-color: #2a1e5c;
       padding: 30px;
       border-radius: 12px;
-      width: 400px;
+      width: 420px;
+      overflow-y: auto;
+      max-height: 95vh;
     }
     .register-box h2 {
       text-align: center;
       margin-bottom: 20px;
     }
-    input {
+    input, textarea {
       width: 100%;
       padding: 12px;
       margin: 10px 0;
@@ -60,47 +62,55 @@
       <input type="text" id="studentId" placeholder="Student ID" required>
       <input type="email" id="email" placeholder="Email ID" required>
       <input type="password" id="password" placeholder="Create Password" required>
+      <input type="date" id="dob" placeholder="Date of Birth">
+      <input type="text" id="contact" placeholder="Contact Number">
+      <textarea id="skills" placeholder="Enter skills (comma separated)"></textarea>
+      <textarea id="bio" placeholder="Short Bio"></textarea>
+      <label>Profile Picture</label>
+      <input type="file" id="profilePic" accept="image/*">
+      <label>Resume</label>
+      <input type="file" id="resume" accept=".pdf,.doc,.docx">
       <button type="submit">Register</button>
     </form>
     <div class="back-link">
       <a href="student_login.html">← Back to Login</a>
     </div>
   </div>
+
 <script>
   document.getElementById("registerForm").addEventListener("submit", async function (e) {
     e.preventDefault();
 
-    const data = {
-      name: document.getElementById("name").value,
-      studentId: document.getElementById("studentId").value,
-      email: document.getElementById("email").value,
-      password: document.getElementById("password").value,
-      role: "student",         // Hardcoded role
-      dob: "",                 // Not in form yet
-      contact: "",             // Not in form yet
-      company: "",             // Only for HR
-      experience: "",          // Only for HR
-      bio: "",                 // Optional
-      profilePic: ""           // Optional
-    };
+    const formData = new FormData();
+    formData.append("name", document.getElementById("name").value);
+    formData.append("studentId", document.getElementById("studentId").value);
+    formData.append("email", document.getElementById("email").value);
+    formData.append("password", document.getElementById("password").value);
+    formData.append("dob", document.getElementById("dob").value);
+    formData.append("contact", document.getElementById("contact").value);
+    formData.append("skills", document.getElementById("skills").value);
+    formData.append("bio", document.getElementById("bio").value);
+    formData.append("role", "student");
+
+    if (document.getElementById("profilePic").files[0]) {
+      formData.append("profilePic", document.getElementById("profilePic").files[0]);
+    }
+    if (document.getElementById("resume").files[0]) {
+      formData.append("resume", document.getElementById("resume").files[0]);
+    }
 
     try {
       const res = await fetch("http://localhost:5000/api/students/register", {
-
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(data)
+        body: formData
       });
 
       const result = await res.json();
-  if (res.ok) {
-  window.location.href = "student_register_success.html";
-} else {
-  alert("Registration failed: " + result.message);
-}
-
+      if (res.ok) {
+        window.location.href = "student_register_success.html";
+      } else {
+        alert("Registration failed: " + result.message);
+      }
     } catch (err) {
       alert("Error: " + err.message);
     }
